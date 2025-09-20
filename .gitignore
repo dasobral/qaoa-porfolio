@@ -140,3 +140,9 @@ core.*
 # Backup files
 *.bak
 *.backup
+
+
+# Added by cargo
+
+/target
+results/
