@@ -34,7 +34,7 @@ cd ../python && pip install -e .
 - Portfolio optimization with quantum computing
 
 ## 📄 License
-This project is licensed under CC BY-NC-ND 4.0 (Creative Commons Attribution-NonCommercial-NoDerivatives) - see the [LICENSE](license) file for details.
+This project is licensed under CC BY-NC-ND 4.0 (Creative Commons Attribution-NonCommercial-NoDerivatives) - see the [LICENSE](LICENSE) file for details.
 For commercial use, please contact the author to discuss licensing terms.
 
 ## 🤝 Acknowledgments
