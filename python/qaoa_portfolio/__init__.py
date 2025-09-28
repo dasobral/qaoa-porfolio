@@ -50,11 +50,15 @@ from .params import PortfolioParams, MarketDataParams, QAOAParams
 # Import data loader
 from .data_loader import (
     MarketDataLoader,
-    load_sp500_symbols,
-    create_sample_portfolio,
-    quick_portfolio_load,
     get_free_tier_recommendations,
     setup_free_tier_environment
+)
+
+# Import portfolio utilities
+from .portfolios import (
+    load_sp500_symbols,
+    create_sample_portfolio,
+    quick_portfolio_load
 )
 
 # Package-level exports
