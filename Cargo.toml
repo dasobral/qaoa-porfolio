@@ -61,7 +61,7 @@ python-bindings = ["pyo3"]
 
 # Benchmarks
 [[bench]]
-name = "portfolio_optimization"
+name = "qaoa_portfolio"
 harness = false
 
 [profile.release]
