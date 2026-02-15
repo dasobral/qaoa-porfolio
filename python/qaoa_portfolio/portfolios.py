@@ -16,6 +16,7 @@ import pandas as pd
 
 from .config import config
 from .exceptions import MarketDataError
+from .data_loader import MarketDataLoader
 
 logger = logging.getLogger(__name__)
 
@@ -198,7 +199,8 @@ def analyze_portfolio_composition(symbols: List[str]) -> Dict[str, int]:
 async def quick_portfolio_load(
     symbols: Optional[List[str]] = None,
     portfolio_type: str = 'stock',
-    days_back: int = 252
+    days_back: int = 252,
+    preset: Optional[str] = None
 ) -> Tuple:
     """
     Quick utility to load portfolio data and calculate returns.
@@ -207,15 +209,14 @@ async def quick_portfolio_load(
         symbols: List of symbols (if None, creates sample portfolio)
         portfolio_type: 'stock', 'crypto', or 'mixed'
         days_back: Number of days of historical data
+        preset: Optional preset name from PORTFOLIO_PRESETS
         
     Returns:
         Tuple of (price_data, returns_data)
     """
-    # Import here to avoid circular import
-    from .data_loader import MarketDataLoader
-    
-    # Create symbols if not provided
-    if symbols is None:
+    if preset is not None:
+        symbols = get_preset_portfolio(preset)
+    elif symbols is None:
         if portfolio_type == 'stock':
             symbols = create_sample_portfolio()
         elif portfolio_type == 'crypto':
@@ -223,7 +224,7 @@ async def quick_portfolio_load(
         elif portfolio_type == 'mixed':
             symbols = create_mixed_portfolio()
         else:
-            raise ValueError(f"Unsupported portfolio type: {portfolio_type}")
+            raise ValueError(f"Invalid portfolio_type: {portfolio_type}")
     
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days_back)
