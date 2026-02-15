@@ -15,13 +15,15 @@ import asyncio
 import time
 from datetime import datetime
 from typing import Dict, List, Optional, Union
-from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
 import numpy as np
-import yfinance as yf
+try:
+    import yfinance as yf
+except ImportError:
+    yf = None
 
-from .exceptions import DataValidationError, MarketDataError, RateLimitError
+from .exceptions import DataValidationError, MarketDataError
 from .utils import DataValidator, PerformanceTimer, ensure_directory
 from .params import MarketDataParams
 from .config import config 
@@ -63,7 +65,10 @@ class MarketDataLoader:
         # Get rate limiting settings
         self.rate_limit_enabled = config.get('performance.conservative_rate_limiting', True)
         if self.rate_limit_enabled:
-            self.rate_limit = config.get('free_tier.yahoo_finance.rate_limit_per_minute', 60)
+            self.rate_limit = config.get(
+                'free_tier.yahoo_finance.rate_limit_per_minute',
+                config.get('free_tier.yahoo_finance.rate_limit_calls_per_minute', 60)
+            )
             self.last_call_time = 0
 
         # Validate configuration
@@ -139,7 +144,7 @@ class MarketDataLoader:
             complete_data = self._combine_portfolio_data(portfolio_data, include_volume)
 
             if validate_data:
-                complete_data = self._validate_and_clean_data(portfolio_data, include_volume)
+                complete_data = self._validate_and_clean_data(complete_data)
 
             logger.info(f"Successfully loaded data for {len(complete_data.columns.levels[0])} symbols.")
 
@@ -158,14 +163,16 @@ class MarketDataLoader:
         validate_data: bool
     ) -> pd.DataFrame:
         """Load data for a single asset asynchronously."""
-        loop = asyncio.get_event_loop()
-        
-        with ThreadPoolExecutor() as pool_exec:
-            future = pool_exec.submit(
-                self._load_single_asset_sync,
-                symbol, start_date, end_date, include_volume, validate_data
-            )
-            return await loop.run_in_executor(pool_exec, future.result())
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None,
+            self._load_single_asset_sync,
+            symbol,
+            start_date,
+            end_date,
+            include_volume,
+            validate_data,
+        )
         
     def _load_single_asset_sync(
         self,
@@ -213,6 +220,11 @@ class MarketDataLoader:
     ) -> pd.DataFrame:
         """Load historical data from Yahoo Finance."""
         try:
+            if yf is None:
+                raise MarketDataError(
+                    "yfinance is required to load market data. Install dependencies "
+                    "with: pip install -r python/requirements.txt"
+                )
             ticker = yf.Ticker(symbol)
 
             # Use period
@@ -279,7 +291,7 @@ class MarketDataLoader:
             raise DataValidationError(f"Missing required columns for {symbol}: {missing_cols}")
         
         # Check for non-positive prices
-        price_cols = expected_cols + ['adj_close']
+        price_cols = [col for col in expected_cols + ['adj_close'] if col in data.columns]
         for col in price_cols:
             if (data[col] <= 0).any():
                 raise DataValidationError(f"Non-positive prices found in {col} for {symbol}")
@@ -310,7 +322,7 @@ class MarketDataLoader:
             data = data.dropna(how='all')
             
             # Forward fill missing values (common in financial data)
-            data = data.fillna(method='ffill')
+            data = data.ffill()
             
             # Remove any remaining NaN values
             data = data.dropna()
@@ -345,6 +357,7 @@ class MarketDataLoader:
                         complete_data[(symbol, column)] = np.nan
 
             # Set multi-level columns names
+            complete_data.columns = pd.MultiIndex.from_tuples(complete_data.columns)
             complete_data.columns.names = ['symbol', 'price_type']
 
             return complete_data
@@ -441,6 +454,9 @@ class MarketDataLoader:
         price_column: str = 'close'
     ) -> pd.DataFrame:
         """Calculate returns from price data."""
+        if return_type not in {'simple', 'log'}:
+            raise ValueError(f"Unsupported return type: {return_type}")
+
         try:
             returns_data = pd.DataFrame()
 
@@ -452,16 +468,19 @@ class MarketDataLoader:
 
                     if return_type == 'simple':
                         returns = prices.pct_change().dropna()
-                    elif return_type == 'log':
-                        returns = np.log(prices / prices.shift(1)).dropna()
                     else:
-                        raise ValueError(f"Unsupported return type: {return_type}")
+                        returns = np.log(prices / prices.shift(1)).dropna()
 
                     returns_data[symbol] = returns
+
+            if returns_data.empty:
+                raise KeyError(f"Price column '{price_column}' not found for any symbols")
 
             logger.info(f"Calculated {return_type} returns for {len(symbols)} symbols")
             return returns_data
 
+        except (KeyError, ValueError):
+            raise
         except Exception as e:
             logger.error(f"Error calculating returns: {e}")
             raise MarketDataError(f"Failed to calculate returns: {e}")
@@ -469,6 +488,23 @@ class MarketDataLoader:
     def get_market_data_summary(self, data: pd.DataFrame) -> Dict:
         """Generate a summary of the loaded market data."""
         try:
+            if data.empty:
+                return {
+                    'symbols': [],
+                    'date_range': {
+                        'start': None,
+                        'end': None,
+                        'total_days': 0
+                    },
+                    'data_points': 0,
+                    'data_quality': {
+                        'missing_values': 0,
+                        'missing_percentage': 0.0
+                    },
+                    'symbols_count': 0,
+                    'columns_per_symbol': 0
+                }
+
             symbols = data.columns.get_level_values(0).unique()
 
             summary = {
@@ -478,6 +514,7 @@ class MarketDataLoader:
                     'end': data.index.max().strftime('%Y-%m-%d'),
                     'total_days': len(data)
                 },
+                'data_points': int(data.shape[0] * data.shape[1]),
                 'data_quality': {
                     'missing_values': data.isnull().sum().sum(),
                     'missing_percentage': (data.isnull().sum().sum() / (data.shape[0] * data.shape[1])) * 100
