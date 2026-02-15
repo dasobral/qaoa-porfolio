@@ -208,6 +208,20 @@ price_data, returns_data = await quick_portfolio_load(
     symbols=['AAPL', 'BTC-USD', 'ETH-USD'],
     days_back=365
 )
+
+# Load a preset portfolio directly
+price_data, returns_data = await quick_portfolio_load(
+    preset='growth_stocks',
+    days_back=180
+)
+```
+
+### CLI
+
+```bash
+cd python
+qaoa-portfolio --help
+qaoa-portfolio --preset conservative_stocks --days-back 120
 ```
 
 ## Configuration

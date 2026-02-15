@@ -77,7 +77,29 @@ For detailed API documentation and usage examples, see [Market Data Loader Docum
 - **Quantum Backend:** QAOA algorithm implementation using PennyLane
 - **Rust Core:** High-performance optimization routines and matrix operations
 - **Visualization:** Portfolio analysis and optimization result visualization
-- **CLI Interface:** Command-line tools for portfolio optimization
+- **CLI Interface:** Initial command-line tools for portfolio data loading
+
+### Current CLI
+
+After installing the Python package in editable mode:
+
+```bash
+cd python
+qaoa-portfolio --help
+```
+
+Example with a preset portfolio:
+
+```bash
+cd python
+qaoa-portfolio --preset growth_stocks --days-back 180
+```
+
+### Current Limits
+
+- `python/qaoa_portfolio/quantum_backend.py` is currently a placeholder.
+- `python/qaoa_portfolio/visualization.py` is currently a placeholder.
+- `src/lib.rs` is still scaffold code and not yet the optimization core.
 
 ### 📋 Planned Components
 
