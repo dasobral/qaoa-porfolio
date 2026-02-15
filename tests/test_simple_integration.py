@@ -74,7 +74,7 @@ class TestTestInfrastructure:
 class TestBasicPortfolioFunctionality:
     """Test basic portfolio functionality without network calls."""
 
-    @patch('qaoa_portfolio.portfolios.pd.read_html')
+    @patch('qaoa_portfolio.presets.pd.read_html')
     def test_sp500_loading_with_mock(self, mock_read_html):
         """Test S&P 500 loading with mocked data."""
         from qaoa_portfolio.portfolios import load_sp500_symbols
@@ -150,7 +150,7 @@ class TestErrorHandling:
         portfolio = create_sample_crypto_portfolio(size=0)
         assert portfolio == []
 
-    @patch('qaoa_portfolio.portfolios.pd.read_html')
+    @patch('qaoa_portfolio.presets.pd.read_html')
     def test_sp500_fallback_on_error(self, mock_read_html):
         """Test S&P 500 fallback when Wikipedia fails."""
         from qaoa_portfolio.portfolios import load_sp500_symbols

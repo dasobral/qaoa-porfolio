@@ -38,7 +38,6 @@ from .utils import (
     format_percentage,
     validate_weights,
     normalize_weights,
-    initialize_qaoa_portfolio
 )
 
 # Import metrics
@@ -91,7 +90,6 @@ __all__ = [
     "format_percentage",
     "validate_weights",
     "normalize_weights",
-    "initialize_qaoa_portfolio",
     
     # Metrics
     "FinancialMetrics",
@@ -111,4 +109,4 @@ __all__ = [
 ]
 
 # Initialize the package
-initialize_qaoa_portfolio()
+config.setup_logging()

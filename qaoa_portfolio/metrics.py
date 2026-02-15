@@ -129,3 +129,44 @@ class FinancialMetrics:
             return 0.0
         
         return aligned_data.iloc[:, 0].corr(aligned_data.iloc[:, 1])
+
+    @staticmethod
+    def calculate_returns(
+        price_data: pd.DataFrame,
+        return_type: str = 'simple',
+        price_column: str = 'close'
+    ) -> pd.DataFrame:
+        """
+        Calculate returns from multi-index price data.
+
+        Args:
+            price_data: DataFrame with multi-level columns (symbol, price_type)
+            return_type: 'simple' or 'log'
+            price_column: Which price column to use (default: 'close')
+
+        Returns:
+            DataFrame with returns per symbol
+        """
+        if return_type not in {'simple', 'log'}:
+            raise ValueError(f"Unsupported return type: {return_type}")
+
+        returns_data = pd.DataFrame()
+
+        # Extract symbols
+        symbols = price_data.columns.get_level_values(0).unique()
+        for symbol in symbols:
+            if (symbol, price_column) in price_data.columns:
+                prices = price_data[(symbol, price_column)].dropna()
+
+                if return_type == 'simple':
+                    returns = prices.pct_change().dropna()
+                else:
+                    returns = np.log(prices / prices.shift(1)).dropna()
+
+                returns_data[symbol] = returns
+
+        if returns_data.empty:
+            raise KeyError(f"Price column '{price_column}' not found for any symbols")
+
+        logger.info(f"Calculated {return_type} returns for {len(symbols)} symbols")
+        return returns_data

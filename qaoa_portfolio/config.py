@@ -23,7 +23,12 @@ class ConfigManager:
     """Configuration management for the QAOA Portfolio Optimizer."""
     
     def __init__(self, config_path: Optional[str] = None):
-        self.config_path = Path(config_path) if config_path else Path("config/settings.json")
+        if config_path:
+            self.config_path = Path(config_path)
+        else:
+            # Look for config in current dir or config/ subdir
+            self.config_path = Path("config/settings.json")
+        
         self.config = self._load_default_config()
         
         if self.config_path.exists():

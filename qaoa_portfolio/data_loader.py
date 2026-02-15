@@ -24,7 +24,9 @@ except ImportError:
     yf = None
 
 from .exceptions import DataValidationError, MarketDataError
-from .utils import DataValidator, PerformanceTimer, ensure_directory
+from .validation import DataValidator
+from .timing import PerformanceTimer
+from .utils import ensure_directory
 from .params import MarketDataParams
 from .config import config 
 
@@ -453,37 +455,13 @@ class MarketDataLoader:
         return_type: str = 'simple',
         price_column: str = 'close'
     ) -> pd.DataFrame:
-        """Calculate returns from price data."""
-        if return_type not in {'simple', 'log'}:
-            raise ValueError(f"Unsupported return type: {return_type}")
+        """Calculate returns from price data.
 
-        try:
-            returns_data = pd.DataFrame()
-
-            # Extract symbols
-            symbols = price_data.columns.get_level_values(0).unique()
-            for symbol in symbols:
-                if (symbol, price_column) in price_data.columns:
-                    prices = price_data[(symbol, price_column)].dropna()
-
-                    if return_type == 'simple':
-                        returns = prices.pct_change().dropna()
-                    else:
-                        returns = np.log(prices / prices.shift(1)).dropna()
-
-                    returns_data[symbol] = returns
-
-            if returns_data.empty:
-                raise KeyError(f"Price column '{price_column}' not found for any symbols")
-
-            logger.info(f"Calculated {return_type} returns for {len(symbols)} symbols")
-            return returns_data
-
-        except (KeyError, ValueError):
-            raise
-        except Exception as e:
-            logger.error(f"Error calculating returns: {e}")
-            raise MarketDataError(f"Failed to calculate returns: {e}")
+        Delegates to FinancialMetrics.calculate_returns().
+        Kept here for backward compatibility.
+        """
+        from .metrics import FinancialMetrics
+        return FinancialMetrics.calculate_returns(price_data, return_type, price_column)
         
     def get_market_data_summary(self, data: pd.DataFrame) -> Dict:
         """Generate a summary of the loaded market data."""

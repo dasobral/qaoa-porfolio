@@ -1,0 +1,63 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "qaoa-portfolio"
+version = "0.1.0"
+description = "High-performance QAOA implementation for portfolio optimization"
+authors = [
+    { name = "Daniel Sobral Blanco", email = "dasobral93@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+keywords = ["quantum", "optimization", "portfolio", "finance", "qaoa"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Common Public License",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "scipy>=1.11.0",
+    "yfinance>=0.2.0",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "pennylane>=0.33.0",
+    "pennylane-lightning>=0.33.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.7.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+    "ipykernel>=6.25.0",
+]
+
+[project.scripts]
+qaoa-portfolio = "qaoa_portfolio.cli:main"
+
+[tool.maturin]
+features = ["python-bindings"]
+python-source = "."
+module-name = "qaoa_portfolio_core"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
