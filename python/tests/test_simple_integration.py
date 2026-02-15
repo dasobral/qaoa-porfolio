@@ -7,6 +7,7 @@ without crashes, using proper error capture and mocking.
 
 import pytest
 import pandas as pd
+import asyncio
 from unittest.mock import Mock, patch
 from tests.utils import MockDataGenerator, DataFrameAssertions, PerformanceTracker
 
@@ -168,17 +169,15 @@ class TestErrorHandling:
 class TestAsyncSupport:
     """Test async functionality and error handling."""
 
-    @pytest.mark.asyncio
-    async def test_async_test_runner_success(self):
+    def test_async_test_runner_success(self):
         """Test async test runner with successful operation."""
         async def mock_async_operation():
             return "success"
 
-        result = await mock_async_operation()
+        result = asyncio.run(mock_async_operation())
         assert result == "success"
 
-    @pytest.mark.asyncio
-    async def test_async_test_runner_with_exception(self):
+    def test_async_test_runner_with_exception(self):
         """Test async test runner handles exceptions properly."""
         from qaoa_portfolio.exceptions import MarketDataError
 
@@ -186,7 +185,7 @@ class TestAsyncSupport:
             raise MarketDataError("Test error")
 
         with pytest.raises(MarketDataError, match="Test error"):
-            await mock_failing_operation()
+            asyncio.run(mock_failing_operation())
 
 
 class TestConfiguration:

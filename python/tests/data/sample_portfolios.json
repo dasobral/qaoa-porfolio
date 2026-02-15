@@ -1,0 +1,29 @@
+{
+  "test_portfolios": {
+    "small_stocks": {
+      "symbols": ["AAPL", "MSFT", "GOOGL"],
+      "description": "Small stock-only test portfolio"
+    },
+    "small_crypto": {
+      "symbols": ["BTC-USD", "ETH-USD", "ADA-USD"],
+      "description": "Small crypto-only test portfolio"
+    },
+    "mixed_portfolio": {
+      "symbols": ["AAPL", "MSFT", "BTC-USD", "ETH-USD", "SPY"],
+      "description": "Mixed stocks and crypto portfolio"
+    },
+    "large_test": {
+      "symbols": ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "JPM"],
+      "description": "Larger portfolio for performance-style tests"
+    }
+  },
+  "test_symbols": {
+    "reliable_stocks": ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META"],
+    "reliable_crypto": ["BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "ADA-USD"]
+  },
+  "expected_data_structure": {
+    "columns": {
+      "price_types": ["open", "high", "low", "close", "volume"]
+    }
+  }
+}

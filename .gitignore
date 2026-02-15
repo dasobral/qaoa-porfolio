@@ -77,6 +77,7 @@ data/real_market_data/
 data/downloads/
 *.csv
 *.json
+!python/tests/data/sample_portfolios.json
 *.h5
 *.hdf5
 *.parquet
