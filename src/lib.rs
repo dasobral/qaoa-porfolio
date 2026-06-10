@@ -1,14 +1,17 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+#![forbid(unsafe_code)]
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub mod error;
+pub mod optimization;
+pub mod portfolio;
+pub mod qubo;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+#[cfg(feature = "python-bindings")]
+pub mod python;
+
+pub use error::{QaoaError, Result};
+pub use optimization::{
+    BruteForceSolver, ContinuousResult, MarkowitzSolver, OptimizationResult, SimulatedAnnealing,
+    SolverMetrics,
+};
+pub use portfolio::{Asset, AssetClass, Portfolio, ReturnSeries};
+pub use qubo::{PenaltyBuilder, QUBOFormulation, QUBOMatrix};

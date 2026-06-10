@@ -50,7 +50,6 @@ qaoa-portfolio = "qaoa_portfolio.cli:main"
 
 [tool.maturin]
 features = ["python-bindings"]
-python-source = "."
 module-name = "qaoa_portfolio_core"
 
 [tool.pytest.ini_options]

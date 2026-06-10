@@ -44,7 +44,11 @@ cd qaoa-portfolio
 cargo build --release
 
 # Install Python components in development mode
-cd python && pip install -e .
+pip install -e ".[dev]"
+
+# Build the optional Rust/Python extension wheel
+python -m pip install maturin
+python -m maturin build --features python-bindings
 ```
 
 ## Current Implementation Status
@@ -72,12 +76,20 @@ The QAOA Portfolio Optimizer is currently in active development with the followi
 
 For detailed API documentation and usage examples, see [Market Data Loader Documentation](docs/dataloader.md).
 
+### ✅ Rust QUBO Core (Completed)
+
+- Portfolio and return-series data structures in Rust
+- Covariance/correlation statistics and Markowitz-to-QUBO formulation
+- Budget, position, and diversification penalty builders
+- Brute-force, simulated annealing, and Markowitz baseline solvers
+- PyO3 bridge module: `qaoa_portfolio_core`
+
+See [Rust Core API](docs/rust_core.md) for usage and build details.
+
 ### 🚧 In Development
 
 - **Quantum Backend:** QAOA algorithm implementation using PennyLane
-- **Rust Core:** High-performance optimization routines and matrix operations
 - **Visualization:** Portfolio analysis and optimization result visualization
-- **CLI Interface:** Initial command-line tools for portfolio data loading
 
 ### Current CLI
 
@@ -97,9 +109,9 @@ qaoa-portfolio --preset growth_stocks --days-back 180
 
 ### Current Limits
 
-- `python/qaoa_portfolio/quantum_backend.py` is currently a placeholder.
-- `python/qaoa_portfolio/visualization.py` is currently a placeholder.
-- `src/lib.rs` is still scaffold code and not yet the optimization core.
+- `qaoa_portfolio/quantum_backend.py` is currently a placeholder.
+- `qaoa_portfolio/visualization.py` is currently a placeholder.
+- Phase 3 will consume Rust-generated QUBO matrices in the PennyLane quantum backend.
 
 ### 📋 Planned Components
 
