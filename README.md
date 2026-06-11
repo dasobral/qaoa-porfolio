@@ -8,30 +8,16 @@ This project showcases how quantum-inspired algorithms can solve complex portfol
 
 ## Quick Start
 
-### Environment Setup
-
-It is strongly recommended to work within a Python virtual environment to manage dependencies and avoid conflicts with system packages.
-
-```bash
-# Create and activate virtual environment
-python -m venv qaoa-env
-source qaoa-env/bin/activate  
-
-# On Windows: qaoa-env\Scripts\activate
-
-# Upgrade pip and install build tools
-pip install --upgrade pip setuptools wheel
-```
-
 ### Prerequisites
 
+Install Rust and `uv` before setting up the project:
+
 ```bash
-# For Rust implementation
+# Rust toolchain for the QUBO core and PyO3 extension
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# For Python quantum backend and market data components
-pip install pennylane numpy pandas matplotlib yfinance
-pip install pytest black flake8 jupyter ipykernel
+# uv manages the Python environment and builds the maturin extension
+python -m pip install uv
 ```
 
 ### Installation
@@ -39,16 +25,18 @@ pip install pytest black flake8 jupyter ipykernel
 ```bash
 git clone https://github.com/your-username/qaoa-portfolio.git
 cd qaoa-portfolio
+export UV_PROJECT_ENVIRONMENT=qaoa-env
+uv sync --extra dev
+source qaoa-env/bin/activate
+qaoa-portfolio --help
+```
 
-# Build classical core (Rust)
+`UV_PROJECT_ENVIRONMENT=qaoa-env` makes uv use `qaoa-env/` as the project environment instead of `.venv/`. Keep that variable exported in shells where you run `uv sync` or `uv run`; otherwise uv will fall back to `.venv` and may warn that `VIRTUAL_ENV=qaoa-env` does not match the project environment.
+
+Build the Rust core directly when working on Rust internals:
+
+```bash
 cargo build --release
-
-# Install Python components in development mode
-pip install -e ".[dev]"
-
-# Build the optional Rust/Python extension wheel
-python -m pip install maturin
-python -m maturin build --features python-bindings
 ```
 
 ## Current Implementation Status
@@ -86,32 +74,40 @@ For detailed API documentation and usage examples, see [Market Data Loader Docum
 
 See [Rust Core API](docs/rust_core.md) for usage and build details.
 
+### ✅ PennyLane QAOA Quantum Backend (Completed)
+
+- Cost Hamiltonian construction from Phase 2 QUBO matrices
+- Standard X-mixer and configurable QAOA layer count
+- Variational optimization with Adam, gradient descent, COBYLA, and Nelder-Mead
+- Deterministic statevector runs for tests and optional shot-based sampling
+- Ranked bitstring decoding into selected portfolio assets
+- Rust QUBO bridge integration through `qaoa_portfolio_core.PyQUBOMatrix`
+
+See [Quantum Backend API](docs/quantum_backend.md) for usage and configuration details.
+
 ### 🚧 In Development
 
-- **Quantum Backend:** QAOA algorithm implementation using PennyLane
 - **Visualization:** Portfolio analysis and optimization result visualization
 
 ### Current CLI
 
-After installing the Python package in editable mode:
+After installing with `UV_PROJECT_ENVIRONMENT=qaoa-env uv sync --extra dev`:
 
 ```bash
-cd python
-qaoa-portfolio --help
+UV_PROJECT_ENVIRONMENT=qaoa-env uv run qaoa-portfolio --help
 ```
 
 Example with a preset portfolio:
 
 ```bash
-cd python
-qaoa-portfolio --preset growth_stocks --days-back 180
+UV_PROJECT_ENVIRONMENT=qaoa-env uv run qaoa-portfolio --preset growth_stocks --days-back 180
 ```
 
 ### Current Limits
 
-- `qaoa_portfolio/quantum_backend.py` is currently a placeholder.
 - `qaoa_portfolio/visualization.py` is currently a placeholder.
-- Phase 3 will consume Rust-generated QUBO matrices in the PennyLane quantum backend.
+- Quantum backend tests use small simulator problems; large scaling studies are deferred to benchmarking phases.
+- Phase 4 will consume QAOA result probabilities, convergence history, and ranked portfolios for visualization.
 
 ### 📋 Planned Components
 

@@ -2,7 +2,7 @@
 QAOA Portfolio Optimizer
 
 A high-performance implementation of the Quantum Approximate Optimization Algorithm (QAOA)
-for portfolio optimization problems, demonstrating quantum-inspired solutions for 
+for portfolio optimization problems, demonstrating quantum-inspired solutions for
 real-world financial applications.
 
 Author: Daniel Sobral Blanco
@@ -22,7 +22,7 @@ from .exceptions import (
     OptimizationError,
     QuantumBackendError,
     RateLimitError,
-    ConfigurationError
+    ConfigurationError,
 )
 
 # Import configuration
@@ -50,14 +50,27 @@ from .params import PortfolioParams, MarketDataParams, QAOAParams
 from .data_loader import (
     MarketDataLoader,
     get_free_tier_recommendations,
-    setup_free_tier_environment
+    setup_free_tier_environment,
 )
 
 # Import portfolio utilities
 from .portfolios import (
     load_sp500_symbols,
     create_sample_portfolio,
-    quick_portfolio_load
+    quick_portfolio_load,
+)
+
+# Import quantum backend
+from .quantum_backend import (
+    QAOAConfig,
+    QAOAResult,
+    QAOAQuantumBackend,
+    bitstring_to_solution,
+    build_cost_hamiltonian,
+    build_mixer_hamiltonian,
+    decode_solution,
+    evaluate_qubo_bitstring,
+    solve_qubo_qaoa,
 )
 
 # Package-level exports
@@ -67,20 +80,17 @@ __all__ = [
     "__author__",
     "__email__",
     "__license__",
-    
     # Exceptions
     "QAOAPortfolioError",
-    "MarketDataError", 
+    "MarketDataError",
     "DataValidationError",
     "OptimizationError",
     "QuantumBackendError",
     "RateLimitError",
     "ConfigurationError",
-    
     # Configuration
     "ConfigManager",
     "config",
-    
     # Utilities
     "PerformanceTimer",
     "performance_monitor",
@@ -90,22 +100,29 @@ __all__ = [
     "format_percentage",
     "validate_weights",
     "normalize_weights",
-    
     # Metrics
     "FinancialMetrics",
-    
     # Parameters
     "PortfolioParams",
-    "MarketDataParams", 
+    "MarketDataParams",
     "QAOAParams",
-    
     # Data loading
     "MarketDataLoader",
     "load_sp500_symbols",
-    "create_sample_portfolio", 
+    "create_sample_portfolio",
     "quick_portfolio_load",
     "get_free_tier_recommendations",
-    "setup_free_tier_environment"
+    "setup_free_tier_environment",
+    # Quantum backend
+    "QAOAConfig",
+    "QAOAResult",
+    "QAOAQuantumBackend",
+    "bitstring_to_solution",
+    "build_cost_hamiltonian",
+    "build_mixer_hamiltonian",
+    "decode_solution",
+    "evaluate_qubo_bitstring",
+    "solve_qubo_qaoa",
 ]
 
 # Initialize the package

@@ -219,9 +219,8 @@ price_data, returns_data = await quick_portfolio_load(
 ### CLI
 
 ```bash
-cd python
-qaoa-portfolio --help
-qaoa-portfolio --preset conservative_stocks --days-back 120
+UV_PROJECT_ENVIRONMENT=qaoa-env uv run qaoa-portfolio --help
+UV_PROJECT_ENVIRONMENT=qaoa-env uv run qaoa-portfolio --preset conservative_stocks --days-back 120
 ```
 
 ## Configuration

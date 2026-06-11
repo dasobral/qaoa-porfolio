@@ -47,7 +47,9 @@ def test_load_portfolio_data_success(monkeypatch, test_config):
 
 def test_calculate_simple_returns(market_loader, mock_price_data, sample_stock_symbols):
     price_data = mock_price_data(sample_stock_symbols, days=10)
-    returns = market_loader.calculate_returns(price_data=price_data, return_type="simple")
+    returns = market_loader.calculate_returns(
+        price_data=price_data, return_type="simple"
+    )
     assert isinstance(returns, pd.DataFrame)
     assert not returns.empty
 
@@ -87,3 +89,78 @@ def test_missing_yfinance_is_actionable(monkeypatch, test_config):
             end_date=datetime.now(),
             include_volume=True,
         )
+
+
+def test_yfinance_history_call_omits_threads_keyword(monkeypatch, test_config):
+    monkeypatch.setattr("qaoa_portfolio.data_loader.config", test_config)
+
+    history_calls = []
+
+    class FakeTicker:
+        def __init__(self, symbol):
+            self.symbol = symbol
+
+        def history(self, **kwargs):
+            history_calls.append(kwargs)
+            if "threads" in kwargs:
+                raise TypeError("unexpected keyword argument 'threads'")
+            return _single_symbol_frame(self.symbol)
+
+    class FakeYFinance:
+        Ticker = FakeTicker
+
+    monkeypatch.setattr("qaoa_portfolio.data_loader.yf", FakeYFinance)
+
+    loader = MarketDataLoader()
+    data = loader._load_from_yfinance(
+        symbol="AAPL",
+        start_date=datetime.now() - timedelta(days=10),
+        end_date=datetime.now(),
+        include_volume=True,
+    )
+
+    assert not data.empty
+    assert history_calls
+    assert "threads" not in history_calls[0]
+
+
+def test_yfinance_timezone_aware_index_accepts_naive_date_bounds(
+    monkeypatch, test_config
+):
+    monkeypatch.setattr("qaoa_portfolio.data_loader.config", test_config)
+
+    class FakeTicker:
+        def __init__(self, symbol):
+            self.symbol = symbol
+
+        def history(self, **kwargs):
+            idx = pd.date_range(
+                "2026-01-01", periods=5, freq="D", tz="America/New_York"
+            )
+            return pd.DataFrame(
+                {
+                    "Open": [100 + i for i in range(5)],
+                    "High": [101 + i for i in range(5)],
+                    "Low": [99 + i for i in range(5)],
+                    "Close": [100 + i for i in range(5)],
+                    "Volume": [1000 + i for i in range(5)],
+                },
+                index=idx,
+            )
+
+    class FakeYFinance:
+        Ticker = FakeTicker
+
+    monkeypatch.setattr("qaoa_portfolio.data_loader.yf", FakeYFinance)
+
+    loader = MarketDataLoader()
+    data = loader._load_from_yfinance(
+        symbol="AAPL",
+        start_date=datetime(2026, 1, 2),
+        end_date=datetime(2026, 1, 4),
+        include_volume=True,
+    )
+
+    assert len(data) == 3
+    assert data.index.tz is not None
+    assert list(data["close"]) == [101, 102, 103]

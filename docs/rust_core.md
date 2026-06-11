@@ -46,11 +46,17 @@ All solvers return `OptimizationResult` or `ContinuousResult` with selected asse
 
 ## Python Bridge
 
-Build the extension with:
+For normal development, let `uv` build and install the extension into `qaoa-env/`:
+
+```bash
+UV_PROJECT_ENVIRONMENT=qaoa-env uv sync --extra dev
+UV_PROJECT_ENVIRONMENT=qaoa-env uv run python -c "import qaoa_portfolio_core"
+```
+
+For manual wheel verification, build the extension directly:
 
 ```bash
 python -m maturin build --features python-bindings
-python -m pip install target/wheels/qaoa_portfolio-*.whl
 ```
 
 The extension exposes `build_qubo(prices, symbols, risk_aversion, target_assets)`, `solve_brute_force(qubo)`, `solve_simulated_annealing(qubo, ...)`, and `solve_markowitz(prices, symbols)`. Errors map to Python `ValueError`, `RuntimeError`, or `qaoa_portfolio_core.OptimizationError`.
