@@ -1,0 +1,11 @@
+[flake8]
+# black is the formatter of record (88 columns); E203/W503 conflict with it.
+max-line-length = 88
+extend-ignore = E203, W503
+exclude =
+    .git,
+    __pycache__,
+    qaoa-env,
+    target,
+    build,
+    dist

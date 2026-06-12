@@ -10,6 +10,8 @@ from tests.utils import MockDataGenerator
 
 qaoa_portfolio_core = pytest.importorskip("qaoa_portfolio_core")
 
+pytestmark = pytest.mark.integration
+
 
 def trend_prices(periods=70):
     base = np.arange(periods, dtype=np.float64)

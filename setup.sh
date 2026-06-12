@@ -1,27 +1,29 @@
-cargo init --name qaoa_portfolio --lib
+#!/usr/bin/env bash
+# Development environment setup for the QAOA Portfolio Optimizer.
+#
+# Requirements: uv (https://docs.astral.sh/uv/) and a Rust toolchain.
+set -euo pipefail
 
-pip install --upgrade pip setuptools wheel
-pip install pennylane numpy pandas matplotlib scipy
-pip install yfinance alpha-vantage quandl requests
-pip install pytest black flake8 jupyter ipykernel
+cd "$(dirname "$0")"
 
-mkdir -p core/src/{portfolio,optimization,math,utils}
-mkdir -p python/{qaoa_portfolio,tests}
-mkdir -p data/{sample_datasets,benchmarks,real_market_data}
-mkdir -p examples benchmarks/{performance_tests,accuracy_analysis,scaling_studies}
-mkdir -p docs scripts results/{benchmarks,visualizations,optimization_runs}
+# The repository-standard Python environment lives in qaoa-env/, not .venv/.
+export UV_PROJECT_ENVIRONMENT=qaoa-env
 
-# Set up Python package structure
-touch python/qaoa_portfolio/__init__.py
-touch python/qaoa_portfolio/{quantum_backend.py,data_loader.py,visualization.py}
-touch python/tests/__init__.py
-touch python/setup.py
+echo "==> Syncing Python environment (qaoa-env/) and building the Rust extension..."
+uv sync --extra dev
 
-# Add results directory to .gitignore (already there, but ensure)
-echo "results/" >> .gitignore
+echo "==> Verifying installation..."
+uv run qaoa-portfolio --help >/dev/null
+uv run pytest -q
+cargo test
 
-# Verify setup
-echo "Setup verification:"
-echo "Rust version: $(rustc --version)"
-echo "Python version: $(python --version)"
-echo "PennyLane version: $(pip show pennylane | grep Version)"
+cat <<'EOF'
+
+Setup complete. Daily usage:
+
+  export UV_PROJECT_ENVIRONMENT=qaoa-env   # once per shell
+  source qaoa-env/bin/activate             # optional: activate the venv
+  uv run pytest                            # Python test suite
+  cargo test                               # Rust test suite
+
+EOF

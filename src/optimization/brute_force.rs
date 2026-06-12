@@ -70,15 +70,17 @@ impl BruteForceSolver {
         let mut best_mask = candidates[0].0;
         let mut best_value = candidates[0].1;
         let mut best_found_at_iteration = 0;
-        let mut convergence_history = Vec::with_capacity(candidates.len());
+        // Record only improvements: a per-candidate history would carry up to
+        // 2^20 entries across the Python bridge for zero analytical value.
+        let mut convergence_history = vec![best_value];
 
-        for (iteration, (mask, objective)) in candidates.iter().copied().enumerate() {
+        for (iteration, (mask, objective)) in candidates.iter().copied().enumerate().skip(1) {
             if objective < best_value {
                 best_mask = mask;
                 best_value = objective;
                 best_found_at_iteration = iteration;
+                convergence_history.push(best_value);
             }
-            convergence_history.push(best_value);
         }
 
         let solution = Self::mask_to_solution(best_mask, n);

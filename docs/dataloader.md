@@ -49,6 +49,12 @@ async def load_portfolio_data(
 
 - Multi-level DataFrame with columns (symbol, price_type)
 
+The index is normalized to timezone-naive calendar dates before symbols are
+combined, so mixed asset classes align correctly (crypto daily bars carry
+UTC-midnight timestamps while US equities carry New York timestamps; joining
+raw timestamps would never overlap). Weekend crypto rows appear as NaN for
+equity columns — drop or forward-fill according to your use case.
+
 **Example:**
 
 ```python

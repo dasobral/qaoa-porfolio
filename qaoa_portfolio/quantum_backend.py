@@ -19,8 +19,8 @@ from scipy.optimize import minimize
 from .exceptions import QuantumBackendError
 from .params import QAOAParams
 
-SUPPORTED_OPTIMIZERS = {"adam", "gradient_descent", "cobyla", "nelder_mead"}
-SUPPORTED_BACKENDS = {"default.qubit", "lightning.qubit"}
+SUPPORTED_OPTIMIZERS = set(QAOAParams.SUPPORTED_OPTIMIZERS)
+SUPPORTED_BACKENDS = set(QAOAParams.SUPPORTED_BACKENDS)
 SYMMETRY_TOLERANCE = 1e-9
 
 
@@ -36,6 +36,7 @@ class QAOAConfig:
     seed: int = 42
     backend: str = "default.qubit"
     num_restarts: int = 3
+    max_stored_solutions: int = 64
 
     def __post_init__(self) -> None:
         if self.layers <= 0:
@@ -58,6 +59,8 @@ class QAOAConfig:
             )
         if self.num_restarts <= 0:
             raise QuantumBackendError("num_restarts must be greater than zero")
+        if self.max_stored_solutions <= 0:
+            raise QuantumBackendError("max_stored_solutions must be greater than zero")
 
 
 @dataclass
@@ -231,6 +234,7 @@ class QAOAQuantumBackend:
                 "layers": self.config.layers,
                 "shots": self.config.shots,
                 "num_restarts": self.config.num_restarts,
+                "max_stored_solutions": self.config.max_stored_solutions,
                 "num_variables": num_wires,
                 "offset": float(offset),
                 "source": source,
@@ -374,24 +378,25 @@ class QAOAQuantumBackend:
             return cost_value
 
         def callback(raw_params: np.ndarray) -> None:
-            objective(raw_params)
+            # `minimize` has already evaluated this point via `objective`,
+            # which keeps `best_cost` current — recording it here avoids
+            # paying a second circuit execution per iteration.
             history.append(best_cost)
 
         method = "COBYLA" if self.config.optimizer == "cobyla" else "Nelder-Mead"
-        result = minimize(
+        minimize(
             objective,
             np.asarray(initial, dtype=float),
             method=method,
             callback=callback,
             options={"maxiter": self.config.max_iterations},
         )
-        final_cost = objective(np.asarray(result.x, dtype=float))
         if not history:
-            history.append(min(best_cost, final_cost))
+            history.append(best_cost)
 
         return {
             "parameters": best_params,
-            "cost": min(best_cost, final_cost),
+            "cost": best_cost,
             "history": history,
             "iterations": max(1, len(history)),
         }
@@ -417,9 +422,18 @@ class QAOAQuantumBackend:
         if total > 0.0:
             raw_probabilities = raw_probabilities / total
 
+        # Keep only the top-k most probable states: the full 2^n map grows
+        # exponentially and downstream consumers (ranking, plots, JSON) only
+        # ever need the head of the distribution.
+        top_k = min(self.config.max_stored_solutions, raw_probabilities.size)
+        top_indices = np.argpartition(raw_probabilities, -top_k)[-top_k:]
+        top_indices = np.sort(top_indices)
+        order = np.argsort(-raw_probabilities[top_indices], kind="stable")
+        top_indices = top_indices[order]
+
         return {
-            format(index, f"0{num_wires}b"): float(probability)
-            for index, probability in enumerate(raw_probabilities)
+            format(int(index), f"0{num_wires}b"): float(raw_probabilities[index])
+            for index in top_indices
         }
 
     def _rank_solutions(

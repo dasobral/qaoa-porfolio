@@ -8,16 +8,16 @@ used across multiple test modules.
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional, Tuple
-from unittest.mock import Mock, MagicMock
+from typing import List, Dict, Any, Optional
+from unittest.mock import Mock
 import tempfile
 import json
 from pathlib import Path
 
-
 # ============================================================================
 # Mock Data Generators
 # ============================================================================
+
 
 class MockDataGenerator:
     """Generate realistic mock data for testing."""
@@ -28,7 +28,7 @@ class MockDataGenerator:
         days: int = 30,
         start_date: Optional[datetime] = None,
         volatility: float = 0.02,
-        seed: Optional[int] = None
+        seed: Optional[int] = None,
     ) -> pd.DataFrame:
         """
         Create realistic mock price data with proper OHLCV structure.
@@ -49,7 +49,7 @@ class MockDataGenerator:
         if start_date is None:
             start_date = datetime.now() - timedelta(days=days)
 
-        date_range = pd.date_range(start=start_date, periods=days, freq='D')
+        date_range = pd.date_range(start=start_date, periods=days, freq="D")
         data = {}
 
         for symbol in symbols:
@@ -69,7 +69,7 @@ class MockDataGenerator:
                     open_price = price
                 else:
                     gap = np.random.normal(0, volatility * 0.5)
-                    open_price = prices[i-1] * (1 + gap)
+                    open_price = prices[i - 1] * (1 + gap)
 
                 # High and low based on intraday volatility
                 intraday_vol = volatility * 0.7
@@ -85,21 +85,21 @@ class MockDataGenerator:
                 volume = int(base_volume * volume_mult)
 
                 # Store data
-                data[(symbol, 'open')] = data.get((symbol, 'open'), []) + [open_price]
-                data[(symbol, 'high')] = data.get((symbol, 'high'), []) + [high_price]
-                data[(symbol, 'low')] = data.get((symbol, 'low'), []) + [low_price]
-                data[(symbol, 'close')] = data.get((symbol, 'close'), []) + [price]
-                data[(symbol, 'volume')] = data.get((symbol, 'volume'), []) + [volume]
+                data[(symbol, "open")] = data.get((symbol, "open"), []) + [open_price]
+                data[(symbol, "high")] = data.get((symbol, "high"), []) + [high_price]
+                data[(symbol, "low")] = data.get((symbol, "low"), []) + [low_price]
+                data[(symbol, "close")] = data.get((symbol, "close"), []) + [price]
+                data[(symbol, "volume")] = data.get((symbol, "volume"), []) + [volume]
 
         df = pd.DataFrame(data, index=date_range)
-        df.columns = pd.MultiIndex.from_tuples(df.columns, names=['symbol', 'price_type'])
+        df.columns = pd.MultiIndex.from_tuples(
+            df.columns, names=["symbol", "price_type"]
+        )
         return df
 
     @staticmethod
     def create_data_with_issues(
-        symbols: List[str],
-        issue_type: str,
-        days: int = 10
+        symbols: List[str], issue_type: str, days: int = 10
     ) -> pd.DataFrame:
         """
         Create mock data with specific data quality issues.
@@ -115,32 +115,32 @@ class MockDataGenerator:
         # Start with clean data
         df = MockDataGenerator.create_realistic_price_data(symbols, days, seed=42)
 
-        if issue_type == 'missing':
+        if issue_type == "missing":
             # Introduce missing values
             for symbol in symbols:
                 # Make some random entries NaN
                 mask = np.random.random(len(df)) < 0.1  # 10% missing
-                df.loc[mask, (symbol, 'close')] = np.nan
-                df.loc[mask[:len(mask)//2], (symbol, 'volume')] = np.nan
+                df.loc[mask, (symbol, "close")] = np.nan
+                df.loc[mask[: len(mask) // 2], (symbol, "volume")] = np.nan
 
-        elif issue_type == 'negative':
+        elif issue_type == "negative":
             # Introduce negative prices
             for symbol in symbols:
                 idx = np.random.choice(df.index, size=2, replace=False)
-                df.loc[idx, (symbol, 'close')] = -abs(df.loc[idx, (symbol, 'close')])
+                df.loc[idx, (symbol, "close")] = -abs(df.loc[idx, (symbol, "close")])
 
-        elif issue_type == 'zero_volume':
+        elif issue_type == "zero_volume":
             # Introduce zero volume
             for symbol in symbols:
                 idx = np.random.choice(df.index, size=3, replace=False)
-                df.loc[idx, (symbol, 'volume')] = 0
+                df.loc[idx, (symbol, "volume")] = 0
 
-        elif issue_type == 'outliers':
+        elif issue_type == "outliers":
             # Introduce extreme price outliers
             for symbol in symbols:
                 idx = np.random.choice(df.index, size=1)[0]
-                current_price = df.loc[idx, (symbol, 'close')]
-                df.loc[idx, (symbol, 'close')] = current_price * 100  # 100x price spike
+                current_price = df.loc[idx, (symbol, "close")]
+                df.loc[idx, (symbol, "close")] = current_price * 100  # 100x price spike
 
         return df
 
@@ -151,20 +151,20 @@ class MockDataGenerator:
         return df
 
     @staticmethod
-    def create_minimal_valid_data(symbol: str = 'TEST') -> pd.DataFrame:
+    def create_minimal_valid_data(symbol: str = "TEST") -> pd.DataFrame:
         """Create minimal valid data for a single symbol."""
-        data = {
-            (symbol, 'close'): [100.0, 101.0],
-            (symbol, 'volume'): [1000, 1100]
-        }
-        df = pd.DataFrame(data, index=pd.date_range('2023-01-01', periods=2))
-        df.columns = pd.MultiIndex.from_tuples(df.columns, names=['symbol', 'price_type'])
+        data = {(symbol, "close"): [100.0, 101.0], (symbol, "volume"): [1000, 1100]}
+        df = pd.DataFrame(data, index=pd.date_range("2023-01-01", periods=2))
+        df.columns = pd.MultiIndex.from_tuples(
+            df.columns, names=["symbol", "price_type"]
+        )
         return df
 
 
 # ============================================================================
 # Mock Configuration Utilities
 # ============================================================================
+
 
 class MockConfigManager:
     """Mock configuration manager for testing."""
@@ -180,27 +180,17 @@ class MockConfigManager:
                 "cache_enabled": False,
                 "cache_duration_days": 1,
                 "free_tier_mode": True,
-                "default": "yfinance"
+                "default": "yfinance",
             },
-            "portfolio": {
-                "default_size": 3
-            },
-            "performance": {
-                "conservative_rate_limiting": False
-            },
-            "logging": {
-                "show_free_tier_tips": False
-            },
-            "free_tier": {
-                "yahoo_finance": {
-                    "rate_limit_per_minute": 60
-                }
-            }
+            "portfolio": {"default_size": 3},
+            "performance": {"conservative_rate_limiting": False},
+            "logging": {"show_free_tier_tips": False},
+            "free_tier": {"yahoo_finance": {"rate_limit_per_minute": 60}},
         }
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get configuration value by dot-separated key."""
-        keys = key.split('.')
+        keys = key.split(".")
         value = self.config_data
 
         try:
@@ -212,7 +202,7 @@ class MockConfigManager:
 
     def set(self, key: str, value: Any) -> None:
         """Set configuration value by dot-separated key."""
-        keys = key.split('.')
+        keys = key.split(".")
         config = self.config_data
 
         for k in keys[:-1]:
@@ -226,6 +216,7 @@ class MockConfigManager:
 # ============================================================================
 # Test File Management
 # ============================================================================
+
 
 class TestFileManager:
     """Manage test files and temporary directories."""
@@ -242,7 +233,7 @@ class TestFileManager:
 
     def create_temp_file(self, content: str = "", suffix: str = ".txt") -> Path:
         """Create a temporary file with optional content."""
-        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix=suffix, delete=False)
+        temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False)
         temp_file.write(content)
         temp_file.close()
 
@@ -279,6 +270,7 @@ class TestFileManager:
 # Error Simulation
 # ============================================================================
 
+
 class ErrorSimulator:
     """Simulate various types of errors for testing."""
 
@@ -301,24 +293,28 @@ class ErrorSimulator:
     def rate_limit_error():
         """Simulate rate limit error."""
         from qaoa_portfolio.exceptions import RateLimitError
+
         return RateLimitError("API rate limit exceeded")
 
     @staticmethod
     def data_validation_error():
         """Simulate data validation error."""
         from qaoa_portfolio.exceptions import DataValidationError
+
         return DataValidationError("Data validation failed")
 
     @staticmethod
     def market_data_error():
         """Simulate market data error."""
         from qaoa_portfolio.exceptions import MarketDataError
+
         return MarketDataError("Failed to load market data")
 
 
 # ============================================================================
 # Performance Testing Utilities
 # ============================================================================
+
 
 class PerformanceTracker:
     """Track performance metrics during tests."""
@@ -330,11 +326,13 @@ class PerformanceTracker:
     def start_timer(self, name: str):
         """Start timing a operation."""
         import time
+
         self.start_times[name] = time.perf_counter()
 
     def end_timer(self, name: str) -> float:
         """End timing and return duration."""
         import time
+
         if name not in self.start_times:
             raise ValueError(f"Timer '{name}' was not started")
 
@@ -363,6 +361,7 @@ class PerformanceTracker:
 # Assertion Helpers
 # ============================================================================
 
+
 class DataFrameAssertions:
     """Custom assertions for DataFrame testing."""
 
@@ -383,7 +382,7 @@ class DataFrameAssertions:
         if not isinstance(df.columns, pd.MultiIndex):
             raise AssertionError("DataFrame must have MultiIndex columns")
 
-        actual_symbols = df.columns.get_level_values('symbol').unique().tolist()
+        actual_symbols = df.columns.get_level_values("symbol").unique().tolist()
         missing_symbols = set(expected_symbols) - set(actual_symbols)
 
         if missing_symbols:
@@ -399,24 +398,28 @@ class DataFrameAssertions:
     @staticmethod
     def assert_positive_prices(df: pd.DataFrame):
         """Assert all price columns have positive values."""
-        price_columns = [col for col in df.columns if col[1] in ['open', 'high', 'low', 'close']]
+        price_columns = [
+            col for col in df.columns if col[1] in ["open", "high", "low", "close"]
+        ]
 
         for col in price_columns:
             if (df[col] <= 0).any():
                 negative_count = (df[col] <= 0).sum()
-                raise AssertionError(f"Column {col} has {negative_count} non-positive values")
+                raise AssertionError(
+                    f"Column {col} has {negative_count} non-positive values"
+                )
 
     @staticmethod
     def assert_valid_ohlc_relationships(df: pd.DataFrame):
         """Assert OHLC data has valid relationships (High >= Low, etc.)."""
-        symbols = df.columns.get_level_values('symbol').unique()
+        symbols = df.columns.get_level_values("symbol").unique()
 
         for symbol in symbols:
             try:
-                high = df[(symbol, 'high')]
-                low = df[(symbol, 'low')]
-                open_price = df[(symbol, 'open')]
-                close = df[(symbol, 'close')]
+                high = df[(symbol, "high")]
+                low = df[(symbol, "low")]
+                open_price = df[(symbol, "open")]
+                close = df[(symbol, "close")]
 
                 # High should be >= Low
                 if (high < low).any():
@@ -439,6 +442,7 @@ class DataFrameAssertions:
 # Test Case Base Classes
 # ============================================================================
 
+
 class BaseTestCase:
     """Base class for test cases with common utilities."""
 
@@ -456,7 +460,7 @@ class BaseTestCase:
         """Common DataFrame validation."""
         assert isinstance(df, pd.DataFrame)
         assert not df.empty
-        DataFrameAssertions.assert_has_multiindex_columns(df, ['symbol', 'price_type'])
+        DataFrameAssertions.assert_has_multiindex_columns(df, ["symbol", "price_type"])
         DataFrameAssertions.assert_symbols_present(df, symbols)
 
 
@@ -466,6 +470,7 @@ class AsyncTestCase(BaseTestCase):
     async def run_with_timeout(self, coro, timeout: float = 5.0):
         """Run coroutine with timeout."""
         import asyncio
+
         try:
             return await asyncio.wait_for(coro, timeout=timeout)
         except asyncio.TimeoutError:
@@ -475,6 +480,7 @@ class AsyncTestCase(BaseTestCase):
 # ============================================================================
 # Mock Object Factories
 # ============================================================================
+
 
 class MockFactory:
     """Factory for creating common mock objects."""

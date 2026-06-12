@@ -37,7 +37,9 @@ class PerformanceTimer:
             if exc_type is None:
                 logger.info(f"✓ {self.name} completed in {self.duration:.4f}s")
             else:
-                logger.error(f"✗ {self.name} failed after {self.duration:.4f}s: {exc_val}")
+                logger.error(
+                    f"✗ {self.name} failed after {self.duration:.4f}s: {exc_val}"
+                )
 
     def get_duration(self) -> Optional[float]:
         """Returns the duration of the timed operation in seconds."""
@@ -46,7 +48,9 @@ class PerformanceTimer:
 
 def performance_monitor(func: Callable) -> Callable:
     """Decorator to monitor the execution time of a function."""
+
     def wrapper(*args, **kwargs):
         with PerformanceTimer(f"{func.__module__}.{func.__name__}"):
             return func(*args, **kwargs)
+
     return wrapper

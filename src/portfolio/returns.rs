@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use crate::error::{QaoaError, Result};
 
 const TRADING_DAYS_PER_YEAR: f64 = 252.0;
-const MIN_TRADING_PERIODS: usize = 60;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReturnSeries {
@@ -125,21 +124,6 @@ impl ReturnSeries {
         }
 
         Ok(correlation)
-    }
-
-    pub fn validate(&self) -> Result<()> {
-        Self::validate_symbol_count(&self.symbols, self.returns.ncols())?;
-        if self.num_periods() < MIN_TRADING_PERIODS {
-            return Err(QaoaError::InvalidInput(format!(
-                "at least {MIN_TRADING_PERIODS} return periods are required"
-            )));
-        }
-        if self.returns.iter().any(|value| !value.is_finite()) {
-            return Err(QaoaError::InvalidInput(
-                "returns must contain only finite values".to_string(),
-            ));
-        }
-        Ok(())
     }
 
     fn daily_mean_returns(&self) -> DVector<f64> {

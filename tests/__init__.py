@@ -12,8 +12,7 @@ from typing import Dict, List
 
 # Configure test logging
 logging.basicConfig(
-    level=logging.WARNING,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.WARNING, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 # ============================================================================
@@ -53,7 +52,9 @@ def get_test_portfolio(name: str) -> List[str]:
     data = load_sample_portfolios()
     portfolios = data.get("test_portfolios", {})
     if name not in portfolios:
-        raise ValueError(f"Unknown portfolio '{name}'. Available: {list(portfolios.keys())}")
+        raise ValueError(
+            f"Unknown portfolio '{name}'. Available: {list(portfolios.keys())}"
+        )
     return portfolios[name]["symbols"]
 
 
@@ -65,7 +66,9 @@ def get_sample_symbols(asset_type: str = "stocks", count: int = 5) -> List[str]:
     if asset_type == "stocks":
         pool = symbols.get("stocks", ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"])
     elif asset_type == "crypto":
-        pool = symbols.get("crypto", ["BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "ADA-USD"])
+        pool = symbols.get(
+            "crypto", ["BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "ADA-USD"]
+        )
     elif asset_type == "mixed":
         stocks = symbols.get("stocks", ["AAPL", "MSFT", "GOOGL"])
         crypto = symbols.get("crypto", ["BTC-USD", "ETH-USD"])

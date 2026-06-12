@@ -3,6 +3,8 @@ import pytest
 
 qaoa_portfolio_core = pytest.importorskip("qaoa_portfolio_core")
 
+pytestmark = pytest.mark.integration
+
 
 def constant_prices(periods=70, assets=4):
     return np.full((periods, assets), 100.0, dtype=np.float64)
@@ -87,6 +89,70 @@ def test_markowitz_bridge_weights_sum_to_one():
     }
     assert np.isclose(sum(result["weights"]), 1.0)
     assert result["symbols"] == ["A", "B", "C"]
+
+
+def test_py_asset_and_portfolio_scaffold_smoke():
+    """Smoke coverage for the spec-mandated bridge scaffold classes."""
+    aapl = qaoa_portfolio_core.PyAsset("AAPL", "stock")
+    assert aapl.symbol == "AAPL"
+    assert aapl.asset_class == "Stock"
+    assert np.isfinite(aapl.expected_return)
+    assert np.isfinite(aapl.volatility)
+
+    with pytest.raises(ValueError):
+        qaoa_portfolio_core.PyAsset("AAPL", "not-an-asset-class")
+
+    portfolio = qaoa_portfolio_core.PyPortfolio()
+    portfolio.add_asset(aapl)
+    portfolio.add_asset(qaoa_portfolio_core.PyAsset("BTC-USD", "crypto"))
+    assert portfolio.num_assets == 2
+    assert portfolio.symbols() == ["AAPL", "BTC-USD"]
+
+    # Duplicate symbols are rejected and must not corrupt the portfolio
+    with pytest.raises(Exception):
+        portfolio.add_asset(qaoa_portfolio_core.PyAsset("AAPL", "stock"))
+    assert portfolio.num_assets == 2
+
+
+def test_py_return_series_scaffold_smoke():
+    returns = np.full((70, 2), 0.001)
+    series = qaoa_portfolio_core.PyReturnSeries(["A", "B"], returns)
+
+    assert series.num_periods == 70
+    assert series.num_assets == 2
+    mean_returns = np.asarray(series.mean_returns())
+    assert mean_returns == pytest.approx([0.001 * 252] * 2)
+    covariance = np.asarray(series.covariance_matrix())
+    assert covariance.shape == (2, 2)
+    assert covariance == pytest.approx(np.zeros((2, 2)))
+
+
+def test_annualization_conventions_agree_to_first_order():
+    """Cross-layer consistency (docs/rust_core.md): Rust annualizes log
+    returns by mean*252; Python compounds simple returns by (1+mean)^252-1.
+    For a low-volatility series the two must agree to first order."""
+    import pandas as pd
+
+    from qaoa_portfolio.metrics import FinancialMetrics
+
+    rng = np.random.default_rng(7)
+    periods = 253
+    daily_drift = 0.0004
+    prices = 100.0 * np.exp(
+        np.cumsum(rng.normal(daily_drift, 0.002, size=(periods, 2)), axis=0)
+    )
+
+    series = qaoa_portfolio_core.PyReturnSeries(
+        ["A", "B"],
+        np.diff(np.log(prices), axis=0),
+    )
+    rust_annualized = np.asarray(series.mean_returns())
+
+    for column, rust_value in zip(range(2), rust_annualized):
+        simple_returns = pd.Series(prices[:, column]).pct_change().dropna()
+        python_annualized = FinancialMetrics.annualized_return(simple_returns)
+        # exp(mu_log * 252) - 1 ~ (1 + mu_simple)^252 - 1 for small daily moves
+        assert np.exp(rust_value) - 1.0 == pytest.approx(python_annualized, abs=5e-3)
 
 
 def test_bridge_maps_invalid_inputs_to_python_exceptions():

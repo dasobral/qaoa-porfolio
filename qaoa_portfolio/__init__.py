@@ -1,9 +1,9 @@
 """
 QAOA Portfolio Optimizer
 
-A high-performance implementation of the Quantum Approximate Optimization Algorithm (QAOA)
-for portfolio optimization problems, demonstrating quantum-inspired solutions for
-real-world financial applications.
+A high-performance implementation of the Quantum Approximate Optimization
+Algorithm (QAOA) for portfolio optimization problems, demonstrating
+quantum-inspired solutions for real-world financial applications.
 
 Author: Daniel Sobral Blanco
 License: CC BY-NC-ND 4.0
@@ -23,6 +23,8 @@ from .exceptions import (
     QuantumBackendError,
     RateLimitError,
     ConfigurationError,
+    VisualizationError,
+    BenchmarkError,
 )
 
 # Import configuration
@@ -60,18 +62,85 @@ from .portfolios import (
     quick_portfolio_load,
 )
 
-# Import quantum backend
-from .quantum_backend import (
-    QAOAConfig,
-    QAOAResult,
-    QAOAQuantumBackend,
-    bitstring_to_solution,
-    build_cost_hamiltonian,
-    build_mixer_hamiltonian,
-    decode_solution,
-    evaluate_qubo_bitstring,
-    solve_qubo_qaoa,
+# Quantum backend and visualization exports are resolved lazily (PEP 562):
+# importing them eagerly pulls in PennyLane/SciPy and matplotlib/seaborn,
+# adding multi-second startup cost to consumers that never touch them
+# (e.g. `qaoa-portfolio --help`).
+_LAZY_EXPORTS = {
+    name: ".quantum_backend"
+    for name in (
+        "QAOAConfig",
+        "QAOAResult",
+        "QAOAQuantumBackend",
+        "bitstring_to_solution",
+        "build_cost_hamiltonian",
+        "build_mixer_hamiltonian",
+        "decode_solution",
+        "evaluate_qubo_bitstring",
+        "solve_qubo_qaoa",
+    )
+}
+_LAZY_EXPORTS.update(
+    {
+        name: ".benchmarks"
+        for name in (
+            "BenchmarkConfig",
+            "BenchmarkRecord",
+            "DEFAULT_SOLVERS",
+            "MAX_EXACT_ASSETS",
+            "approximation_ratio",
+            "generate_synthetic_prices",
+            "run_solver",
+            "run_quality_benchmark",
+            "run_scaling_benchmark",
+            "run_layer_benchmark",
+            "run_market_study",
+            "summarize_quality",
+            "significance_test",
+            "save_benchmark_results",
+        )
+    }
 )
+_LAZY_EXPORTS.update(
+    {
+        name: ".visualization"
+        for name in (
+            "VisualizationConfig",
+            "normalize_qaoa_result",
+            "prepare_composition_data",
+            "prepare_risk_return_data",
+            "prepare_probability_data",
+            "prepare_top_solutions_data",
+            "prepare_solver_comparison_data",
+            "plot_portfolio_composition",
+            "plot_risk_return_scatter",
+            "plot_correlation_heatmap",
+            "plot_efficient_frontier",
+            "plot_qaoa_convergence",
+            "plot_solution_probabilities",
+            "plot_top_solutions",
+            "render_qaoa_circuit_summary",
+            "plot_solver_comparison",
+        )
+    }
+)
+
+
+def __getattr__(name: str):
+    module_path = _LAZY_EXPORTS.get(name)
+    if module_path is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    import importlib
+
+    module = importlib.import_module(module_path, __name__)
+    value = getattr(module, name)
+    globals()[name] = value  # cache so __getattr__ runs once per name
+    return value
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))
+
 
 # Package-level exports
 __all__ = [
@@ -88,6 +157,8 @@ __all__ = [
     "QuantumBackendError",
     "RateLimitError",
     "ConfigurationError",
+    "VisualizationError",
+    "BenchmarkError",
     # Configuration
     "ConfigManager",
     "config",
@@ -123,7 +194,36 @@ __all__ = [
     "decode_solution",
     "evaluate_qubo_bitstring",
     "solve_qubo_qaoa",
+    # Visualization
+    "VisualizationConfig",
+    "normalize_qaoa_result",
+    "prepare_composition_data",
+    "prepare_risk_return_data",
+    "prepare_probability_data",
+    "prepare_top_solutions_data",
+    "prepare_solver_comparison_data",
+    "plot_portfolio_composition",
+    "plot_risk_return_scatter",
+    "plot_correlation_heatmap",
+    "plot_efficient_frontier",
+    "plot_qaoa_convergence",
+    "plot_solution_probabilities",
+    "plot_top_solutions",
+    "render_qaoa_circuit_summary",
+    "plot_solver_comparison",
+    # Benchmarks
+    "BenchmarkConfig",
+    "BenchmarkRecord",
+    "DEFAULT_SOLVERS",
+    "MAX_EXACT_ASSETS",
+    "approximation_ratio",
+    "generate_synthetic_prices",
+    "run_solver",
+    "run_quality_benchmark",
+    "run_scaling_benchmark",
+    "run_layer_benchmark",
+    "run_market_study",
+    "summarize_quality",
+    "significance_test",
+    "save_benchmark_results",
 ]
-
-# Initialize the package
-config.setup_logging()

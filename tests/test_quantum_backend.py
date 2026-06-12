@@ -20,6 +20,8 @@ try:
 except ImportError:  # pragma: no cover - exercised only without the extension installed
     qaoa_portfolio_core = None
 
+pytestmark = pytest.mark.unit
+
 
 TOY_QUBO = np.array(
     [

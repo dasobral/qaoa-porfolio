@@ -23,7 +23,7 @@ python -m pip install uv
 ### Installation
 
 ```bash
-git clone https://github.com/your-username/qaoa-portfolio.git
+git clone https://github.com/dasobral/qaoa-portfolio.git
 cd qaoa-portfolio
 export UV_PROJECT_ENVIRONMENT=qaoa-env
 uv sync --extra dev
@@ -85,9 +85,39 @@ See [Rust Core API](docs/rust_core.md) for usage and build details.
 
 See [Quantum Backend API](docs/quantum_backend.md) for usage and configuration details.
 
+### ✅ Visualization & Analysis (Completed)
+
+- Portfolio composition, risk-return scatter, correlation heatmap, and efficient frontier plots
+- QAOA convergence, solution probability, and top-solution charts from `QAOAResult` payloads
+- Text-based QAOA circuit summaries and solver comparison plots (QAOA vs classical baselines)
+- Matplotlib static figures by default with optional Plotly interactive backend
+- Rendering-free chart-data helpers validated headlessly in tests
+
+See [Visualization API](docs/visualization.md) for usage and configuration details.
+
+### ✅ Benchmarking & Performance (Completed)
+
+- Seeded, paired benchmark harness comparing QAOA against brute force, simulated annealing, Markowitz top-k, and random selection
+- Approximation-ratio quality metric with paired Wilcoxon significance testing
+- Time/memory scaling studies across 4–20 assets and QAOA depths 1–10
+- Real market data studies (S&P 500 subset, crypto, mixed) with out-of-sample evaluation
+- `qaoa-portfolio benchmark` CLI subcommand writing reproducible JSON artifacts
+
+**Headline results** (8 assets, select 4, 10 paired instances; full tables and methodology in [Benchmarks](docs/benchmarks.md)):
+
+| Solver | Mean quality ratio | Optimal runs | Median time |
+|--------|-------------------:|-------------:|------------:|
+| Brute force (Rust) | 1.000 | 10/10 | < 1 ms |
+| Simulated annealing (Rust) | 1.000 | 10/10 | 0.7 ms |
+| Markowitz top-k (Rust) | 0.886 | 6/10 | 0.1 ms |
+| QAOA (PennyLane, 1 layer) | 0.825 | 3/10 | 23.2 s |
+| Random selection | 0.558 | 0/10 | 0.1 ms |
+
+QAOA beats random selection by +48 % relative quality (Wilcoxon p ≈ 0.002, exceeding the 15–25 % roadmap target) and is statistically indistinguishable from the classical Markowitz baseline (p ≈ 0.30). On real 2022–2024 data QAOA found the exact QUBO optimum for the crypto and mixed-asset studies. The measured ceiling for exact statevector simulation is 20 assets (396 s, 16 GB per solve).
+
 ### 🚧 In Development
 
-- **Visualization:** Portfolio analysis and optimization result visualization
+- **Polish & Presentation:** Documentation, examples, and demos (Phase 6)
 
 ### Current CLI
 
@@ -103,11 +133,17 @@ Example with a preset portfolio:
 UV_PROJECT_ENVIRONMENT=qaoa-env uv run qaoa-portfolio --preset growth_stocks --days-back 180
 ```
 
+Run a benchmark suite:
+
+```bash
+UV_PROJECT_ENVIRONMENT=qaoa-env uv run qaoa-portfolio benchmark --suite quality --assets 8 --repeats 10 --plot
+```
+
 ### Current Limits
 
-- `qaoa_portfolio/visualization.py` is currently a placeholder.
-- Quantum backend tests use small simulator problems; large scaling studies are deferred to benchmarking phases.
-- Phase 4 will consume QAOA result probabilities, convergence history, and ranked portfolios for visualization.
+- Exact statevector simulation caps benchmarks at 20 assets (measured: 396 s / 16 GB per QAOA solve at n = 20); larger sizes require a shot-based sampling mode.
+- Visualization covers reusable plotting functions; dashboards and notebook walkthroughs are deferred to later phases.
+- Rendered quantum circuit diagrams are text-only summaries until Phase 6.
 
 ### 📋 Planned Components
 

@@ -20,10 +20,11 @@
 *.exe
 
 # Rust specific
+# Cargo.lock is tracked: this crate ships a cdylib wheel, so builds and
+# Phase 5 performance numbers must be reproducible.
 debug
 /target/
 **/*.rs.bk
-Cargo.lock
 
 # Python specific
 __pycache__/
@@ -149,7 +150,7 @@ core.*
 /target
 results/
 
-# CLAUDE
+# Private agent instructions (kept local; tracked docs must not reference these)
 CLAUDE.md
 
 # OTHER

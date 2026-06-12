@@ -69,10 +69,13 @@ impl PyPortfolio {
     }
 
     pub fn add_asset(&mut self, asset: &PyAsset) -> PyResult<()> {
-        let mut assets = self.assets.clone();
-        assets.push(asset.inner.clone());
-        Portfolio::new(assets.clone()).map_err(map_err)?;
-        self.assets = assets;
+        // Push first and roll back on validation failure: one clone for the
+        // validating Portfolio instead of two full vector clones per call.
+        self.assets.push(asset.inner.clone());
+        if let Err(error) = Portfolio::new(self.assets.clone()) {
+            self.assets.pop();
+            return Err(map_err(error));
+        }
         Ok(())
     }
 

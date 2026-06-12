@@ -33,28 +33,29 @@ logger = logging.getLogger(__name__)
 # Portfolio Analysis Utilities
 # ============================================================================
 
+
 def classify_asset_type(symbol: str) -> str:
     """Classify asset type based on symbol format."""
-    if symbol.endswith('-USD'):
-        return 'crypto'
-    elif '=' in symbol or symbol.endswith('.FX'):
-        return 'forex'
-    elif symbol.startswith('^'):
-        return 'index'
+    if symbol.endswith("-USD"):
+        return "crypto"
+    elif "=" in symbol or symbol.endswith(".FX"):
+        return "forex"
+    elif symbol.startswith("^"):
+        return "index"
     else:
-        return 'stock'
+        return "stock"
 
 
 def analyze_portfolio_composition(symbols: List[str]) -> Dict[str, int]:
     """Analyze portfolio composition by asset type."""
-    composition = {'stock': 0, 'crypto': 0, 'forex': 0, 'index': 0, 'other': 0}
+    composition = {"stock": 0, "crypto": 0, "forex": 0, "index": 0, "other": 0}
 
     for symbol in symbols:
         asset_type = classify_asset_type(symbol)
         if asset_type in composition:
             composition[asset_type] += 1
         else:
-            composition['other'] += 1
+            composition["other"] += 1
 
     return composition
 
@@ -63,11 +64,12 @@ def analyze_portfolio_composition(symbols: List[str]) -> Dict[str, int]:
 # Quick Portfolio Loading Wrapper
 # ============================================================================
 
+
 async def quick_portfolio_load(
     symbols: Optional[List[str]] = None,
-    portfolio_type: str = 'stock',
+    portfolio_type: str = "stock",
     days_back: int = 252,
-    preset: Optional[str] = None
+    preset: Optional[str] = None,
 ) -> Tuple:
     """
     Quick utility to load portfolio data and calculate returns.
@@ -84,11 +86,11 @@ async def quick_portfolio_load(
     if preset is not None:
         symbols = get_preset_portfolio(preset)
     elif symbols is None:
-        if portfolio_type == 'stock':
+        if portfolio_type == "stock":
             symbols = create_sample_portfolio()
-        elif portfolio_type == 'crypto':
+        elif portfolio_type == "crypto":
             symbols = create_sample_crypto_portfolio()
-        elif portfolio_type == 'mixed':
+        elif portfolio_type == "mixed":
             symbols = create_mixed_portfolio()
         else:
             raise ValueError(f"Invalid portfolio_type: {portfolio_type}")
@@ -101,13 +103,11 @@ async def quick_portfolio_load(
     try:
         # Load price data
         price_data = await loader.load_portfolio_data(
-            symbols=symbols,
-            start_date=start_date,
-            end_date=end_date
+            symbols=symbols, start_date=start_date, end_date=end_date
         )
 
         # Calculate returns
-        returns_data = loader.calculate_returns(price_data, return_type='simple')
+        returns_data = loader.calculate_returns(price_data, return_type="simple")
 
         # Analyze composition
         composition = analyze_portfolio_composition(symbols)

@@ -1,9 +1,13 @@
 from pathlib import Path
 
+import pytest
+
 try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover - Python < 3.11 fallback
     import tomli as tomllib  # type: ignore[no-redef]
+
+pytestmark = pytest.mark.unit
 
 
 def test_maturin_config_includes_python_package_sources():

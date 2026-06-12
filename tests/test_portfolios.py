@@ -17,6 +17,8 @@ from qaoa_portfolio.portfolios import (
     quick_portfolio_load,
 )
 
+pytestmark = pytest.mark.unit
+
 
 def test_create_sample_portfolio_size():
     portfolio = create_sample_portfolio(size=3)
@@ -49,11 +51,17 @@ def test_get_preset_portfolio_invalid_name():
 def test_quick_portfolio_load_preset(mock_loader_class):
     mock_loader = Mock()
     mock_loader_class.return_value = mock_loader
-    mock_loader.load_portfolio_data = AsyncMock(return_value=pd.DataFrame({("AAPL", "close"): [100, 101]}))
+    mock_loader.load_portfolio_data = AsyncMock(
+        return_value=pd.DataFrame({("AAPL", "close"): [100, 101]})
+    )
     mock_loader.calculate_returns = Mock(return_value=pd.DataFrame({"AAPL": [0.01]}))
 
-    with patch("qaoa_portfolio.portfolios.get_preset_portfolio", return_value=["AAPL", "MSFT"]) as mock_preset:
-        price_data, returns_data = asyncio.run(quick_portfolio_load(preset="growth_stocks"))
+    with patch(
+        "qaoa_portfolio.portfolios.get_preset_portfolio", return_value=["AAPL", "MSFT"]
+    ) as mock_preset:
+        price_data, returns_data = asyncio.run(
+            quick_portfolio_load(preset="growth_stocks")
+        )
 
     mock_preset.assert_called_once_with("growth_stocks")
     assert isinstance(price_data, pd.DataFrame)

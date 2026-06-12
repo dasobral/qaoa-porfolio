@@ -12,8 +12,9 @@ License: CC BY-NC-ND 4.0
 import logging
 import warnings
 import asyncio
+import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Union
 
 import pandas as pd
@@ -75,16 +76,19 @@ class MarketDataLoader:
                 "free_tier.yahoo_finance.rate_limit_per_minute",
                 config.get("free_tier.yahoo_finance.rate_limit_calls_per_minute", 60),
             )
-            self.last_call_time = 0
+            self.last_call_time = 0.0
+        self._rate_limit_lock = threading.Lock()
 
         # Validate configuration
         if self.data_source != "yfinance":
             logger.warning(
-                f"Only Yahoo Finance is supported in free tier version. Igoring configured source '{self.data_source}'."
+                "Only Yahoo Finance is supported in free tier version. "
+                f"Ignoring configured source '{self.data_source}'."
             )
 
         logger.info(
-            f"MarketDataLoader initialized with data source: {self.data_source}, cache enabled: {self.cache_enabled}"
+            f"MarketDataLoader initialized with data source: {self.data_source}, "
+            f"cache enabled: {self.cache_enabled}"
         )
         if config.get("logging.show_free_tier_tips", True):
             self._show_free_tier_info()
@@ -126,11 +130,12 @@ class MarketDataLoader:
             start_date, end_date = DataValidator.val_date_range(start_date, end_date)
 
             logger.info(
-                f"Loading data for {len(symbols)} symbols from {start_date.date()} to {end_date.date()}"
+                f"Loading data for {len(symbols)} symbols "
+                f"from {start_date.date()} to {end_date.date()}"
             )
 
             with PerformanceTimer(
-                f"Portfolio data loading (Yahoo Finance)", log_result=True
+                "Portfolio data loading (Yahoo Finance)", log_result=True
             ):
                 # Load data asynchronously
                 data_tasks = [
@@ -167,11 +172,16 @@ class MarketDataLoader:
                 complete_data = self._validate_and_clean_data(complete_data)
 
             logger.info(
-                f"Successfully loaded data for {len(complete_data.columns.levels[0])} symbols."
+                "Successfully loaded data for "
+                f"{len(complete_data.columns.levels[0])} symbols."
             )
 
             return complete_data
 
+        except (MarketDataError, DataValidationError):
+            # Already typed and logged at the failure site; re-wrapping would
+            # lose the exception type and log the same failure twice.
+            raise
         except Exception as e:
             logger.error(f"Error loading portfolio data: {e}")
             raise MarketDataError(f"Failed to load portfolio data: {e}")
@@ -224,6 +234,7 @@ class MarketDataLoader:
 
             if validate_data:
                 self._validate_basic_asset_data(data, symbol)
+                DataValidator.val_price_data(data, symbol)
 
             # Cache the data
             if self.cache_enabled and data is not None:
@@ -251,28 +262,11 @@ class MarketDataLoader:
                 )
             ticker = yf.Ticker(symbol)
 
-            # Use period
-            total_days = (end_date - start_date).days
-            if total_days <= 7:
-                period = "7d"
-            elif total_days <= 30:
-                period = "1mo"
-            elif total_days <= 90:
-                period = "3mo"
-            elif total_days <= 180:
-                period = "6mo"
-            elif total_days <= 365:
-                period = "1y"
-            elif total_days <= 365 * 2:
-                period = "2y"
-            elif total_days <= 365 * 5:
-                period = "5y"
-            else:
-                period = "max"
-
-            # Download with optimized settings
+            # Fetch the explicit window; yfinance treats `end` as exclusive,
+            # so extend by one day to keep [start_date, end_date] inclusive.
             data = ticker.history(
-                period=period,
+                start=start_date,
+                end=end_date + timedelta(days=1),
                 interval="1d",
                 auto_adjust=True,
                 prepost=False,
@@ -391,6 +385,20 @@ class MarketDataLoader:
     ) -> pd.DataFrame:
         """Combine individual asset DataFrames into a single multi-index DataFrame."""
         try:
+            # Align on calendar dates: daily bars carry exchange-local
+            # timestamps (crypto at UTC midnight, US equities at New York
+            # midnight), so joining raw indexes across asset classes never
+            # overlaps and mixed portfolios collapse to NaN.
+            # Parsing through UTC also tolerates cache-reloaded indexes whose
+            # string timestamps mix DST offsets (EST/EDT) within one window.
+            normalized: Dict[str, pd.DataFrame] = {}
+            for symbol, data in portfolio_data.items():
+                index = pd.to_datetime(data.index, utc=True).tz_localize(None)
+                data = data.copy()
+                data.index = index.normalize()
+                normalized[symbol] = data[~data.index.duplicated(keep="last")]
+            portfolio_data = normalized
+
             # Select common columns
             all_cols = set()
             for data in portfolio_data.values():
@@ -417,17 +425,23 @@ class MarketDataLoader:
             raise MarketDataError(f"Failed to combine portfolio data: {e}")
 
     def _apply_rate_limit(self) -> None:
-        """Apply rate limiting for API calls."""
-        current_time = time.time()
-        time_since_last = current_time - self.last_call_time
+        """Apply rate limiting for API calls.
+
+        Thread-safe: holding the lock across the read-sleep-update sequence
+        serializes concurrent executor threads so calls stay spaced at least
+        one interval apart.
+        """
         min_interval = 60 / self.rate_limit
 
-        if time_since_last < min_interval:
-            sleep_time = min_interval - time_since_last
-            logger.debug(f"Rate limiting: sleeping for {sleep_time:.2f} seconds")
-            time.sleep(sleep_time)
+        with self._rate_limit_lock:
+            time_since_last = time.time() - self.last_call_time
 
-        self.last_call_time = time.time()
+            if time_since_last < min_interval:
+                sleep_time = min_interval - time_since_last
+                logger.debug(f"Rate limiting: sleeping for {sleep_time:.2f} seconds")
+                time.sleep(sleep_time)
+
+            self.last_call_time = time.time()
 
     def _load_from_cache(
         self, symbol: str, start_date: datetime, end_date: datetime
@@ -436,9 +450,9 @@ class MarketDataLoader:
         if not self.cache_dir:
             return None
 
-        cache_file = (
-            self.cache_dir
-            / f"{symbol}_yfinance_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
+        cache_file = self.cache_dir / (
+            f"{symbol}_yfinance_{start_date.strftime('%Y%m%d')}"
+            f"_{end_date.strftime('%Y%m%d')}.csv"
         )
 
         if cache_file.exists():
@@ -462,7 +476,7 @@ class MarketDataLoader:
                 logger.warning(f"Error loading from cache: {e}")
                 try:
                     cache_file.unlink()  # Delete corrupted cache
-                except:
+                except OSError:
                     pass
 
         return None
@@ -474,9 +488,9 @@ class MarketDataLoader:
         if not self.cache_dir:
             return
 
-        cache_file = (
-            self.cache_dir
-            / f"{symbol}_yfinance_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
+        cache_file = self.cache_dir / (
+            f"{symbol}_yfinance_{start_date.strftime('%Y%m%d')}"
+            f"_{end_date.strftime('%Y%m%d')}.csv"
         )
 
         try:
@@ -495,7 +509,8 @@ class MarketDataLoader:
                     return datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
                 except ValueError:
                     raise ValueError(
-                        f"Invalid date format: {date}. Use 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'"
+                        f"Invalid date format: {date}. "
+                        "Use 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'"
                     )
         elif isinstance(date, datetime):
             return date
@@ -576,7 +591,8 @@ def get_free_tier_recommendations() -> Dict:
         ],
         "best_practices": [
             "Use caching to avoid repeated API calls",
-            f"Keep portfolio sizes reasonable (default: {config.get('portfolio.default_size', 5)} symbols)",
+            "Keep portfolio sizes reasonable "
+            f"(default: {config.get('portfolio.default_size', 5)} symbols)",
             "Use shorter time periods for initial testing",
             "Enable rate limiting for stability",
         ],
@@ -595,19 +611,18 @@ def setup_free_tier_environment() -> None:
         return
 
     recommendations = get_free_tier_recommendations()
+    configuration = recommendations["configuration"]
+    caching = "Enabled" if configuration["cache_enabled"] else "Disabled"
+    rate_limiting = "Enabled" if configuration["rate_limiting"] else "Disabled"
 
     print("\n" + "=" * 50)
     print("🆓 QAOA PORTFOLIO OPTIMIZER - FREE TIER")
     print("=" * 50)
     print(f"📊 Data Source: {recommendations['source']}")
+    print(f"💾 Caching: {caching}")
+    print(f"⚡ Rate Limiting: {rate_limiting}")
     print(
-        f"💾 Caching: {'Enabled' if recommendations['configuration']['cache_enabled'] else 'Disabled'}"
-    )
-    print(
-        f"⚡ Rate Limiting: {'Enabled' if recommendations['configuration']['rate_limiting'] else 'Disabled'}"
-    )
-    print(
-        f"📈 Default Portfolio Size: {recommendations['configuration']['default_portfolio_size']} symbols"
+        f"📈 Default Portfolio Size: {configuration['default_portfolio_size']} symbols"
     )
     print("=" * 50)
 

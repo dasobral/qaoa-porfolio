@@ -7,12 +7,12 @@ of using the enhanced test package functionality.
 """
 
 import pytest
-from pathlib import Path
-from typing import List, Dict
 
 # Import from the enhanced test package
 import tests
 from tests.utils import MockDataGenerator, DataFrameAssertions
+
+pytestmark = pytest.mark.integration
 
 
 class TestDataDirectoryIntegration:
@@ -38,8 +38,12 @@ class TestDataDirectoryIntegration:
         # Load sample portfolios
         portfolios_data = tests.load_sample_portfolios()
 
-        assert isinstance(portfolios_data, dict), "Portfolios data should be a dictionary"
-        assert "test_portfolios" in portfolios_data, "Should contain test_portfolios key"
+        assert isinstance(
+            portfolios_data, dict
+        ), "Portfolios data should be a dictionary"
+        assert (
+            "test_portfolios" in portfolios_data
+        ), "Should contain test_portfolios key"
         assert "test_symbols" in portfolios_data, "Should contain test_symbols key"
 
         # Check test portfolios
@@ -71,12 +75,16 @@ class TestDataDirectoryIntegration:
         stocks = tests.get_sample_symbols("stocks", 3)
         assert isinstance(stocks, list), "Should return list"
         assert len(stocks) == 3, "Should return requested number of symbols"
-        assert all(isinstance(symbol, str) for symbol in stocks), "All should be strings"
+        assert all(
+            isinstance(symbol, str) for symbol in stocks
+        ), "All should be strings"
 
         # Test getting crypto symbols
         crypto = tests.get_sample_symbols("crypto", 2)
         assert len(crypto) == 2, "Should return requested number of crypto symbols"
-        assert all(symbol.endswith("-USD") for symbol in crypto), "Crypto symbols should end with -USD"
+        assert all(
+            symbol.endswith("-USD") for symbol in crypto
+        ), "Crypto symbols should end with -USD"
 
         # Test mixed symbols
         mixed = tests.get_sample_symbols("mixed", 5)
@@ -93,10 +101,14 @@ class TestDataDirectoryIntegration:
 
         # Validate the data structure
         assert mock_data.shape[0] == 10, "Should have 10 days of data"
-        assert mock_data.shape[1] == len(small_stocks) * 5, "Should have OHLCV for each symbol"
+        assert (
+            mock_data.shape[1] == len(small_stocks) * 5
+        ), "Should have OHLCV for each symbol"
 
         # Validate using DataFrame assertions
-        DataFrameAssertions.assert_has_multiindex_columns(mock_data, ['symbol', 'price_type'])
+        DataFrameAssertions.assert_has_multiindex_columns(
+            mock_data, ["symbol", "price_type"]
+        )
         DataFrameAssertions.assert_symbols_present(mock_data, small_stocks)
         DataFrameAssertions.assert_no_missing_data(mock_data)
         DataFrameAssertions.assert_positive_prices(mock_data)
@@ -110,26 +122,38 @@ class TestDataDirectoryIntegration:
             expected_structure = portfolios_data["expected_data_structure"]
 
             assert "columns" in expected_structure, "Should define expected columns"
-            assert "price_types" in expected_structure["columns"], "Should define price types"
+            assert (
+                "price_types" in expected_structure["columns"]
+            ), "Should define price types"
 
             expected_price_types = expected_structure["columns"]["price_types"]
             assert "open" in expected_price_types, "Should include 'open' price type"
             assert "close" in expected_price_types, "Should include 'close' price type"
-            assert "volume" in expected_price_types, "Should include 'volume' price type"
+            assert (
+                "volume" in expected_price_types
+            ), "Should include 'volume' price type"
 
     def test_test_configuration_integration(self):
         """Test that test configuration works with data directory."""
         config = tests.get_test_config()
 
         # Verify test-specific settings
-        assert config["data_sources"]["cache_enabled"] is False, "Cache should be disabled for tests"
-        assert config["performance"]["conservative_rate_limiting"] is False, "Rate limiting should be disabled"
-        assert config["portfolio"]["default_size"] == 3, "Should have small default size for tests"
+        assert (
+            config["data_sources"]["cache_enabled"] is False
+        ), "Cache should be disabled for tests"
+        assert (
+            config["performance"]["conservative_rate_limiting"] is False
+        ), "Rate limiting should be disabled"
+        assert (
+            config["portfolio"]["default_size"] == 3
+        ), "Should have small default size for tests"
 
         # Test configuration should include testing-specific settings
         if "testing" in config:
             test_config = config["testing"]
-            assert "mock_data_seed" in test_config, "Should have mock data seed for reproducibility"
+            assert (
+                "mock_data_seed" in test_config
+            ), "Should have mock data seed for reproducibility"
             assert "timeout_seconds" in test_config, "Should have timeout configuration"
 
 
@@ -148,7 +172,9 @@ class TestDataDirectoryUsageExamples:
         )
 
         # Step 3: Validate the data
-        DataFrameAssertions.assert_has_multiindex_columns(price_data, ['symbol', 'price_type'])
+        DataFrameAssertions.assert_has_multiindex_columns(
+            price_data, ["symbol", "price_type"]
+        )
         DataFrameAssertions.assert_symbols_present(price_data, portfolio_symbols)
 
         # Step 4: Use test configuration
@@ -157,7 +183,9 @@ class TestDataDirectoryUsageExamples:
 
         # Demonstrate that this is a complete, realistic test workflow
         assert len(price_data) == 30, "Should have 30 days of data"
-        assert price_data.shape[1] == len(portfolio_symbols) * 5, "Should have OHLCV data"
+        assert (
+            price_data.shape[1] == len(portfolio_symbols) * 5
+        ), "Should have OHLCV data"
 
     def test_error_handling_with_sample_data(self):
         """Test error handling using sample portfolios."""
@@ -171,7 +199,9 @@ class TestDataDirectoryUsageExamples:
         error_sim = ErrorSimulator()
 
         # Test that errors can be safely simulated
-        with pytest.raises(Exception):  # Specific exception type depends on what we're testing
+        with pytest.raises(
+            Exception
+        ):  # Specific exception type depends on what we're testing
             raise error_sim.market_data_error()
 
     def test_performance_testing_with_sample_data(self):
@@ -182,7 +212,9 @@ class TestDataDirectoryUsageExamples:
         small_portfolio = tests.get_test_portfolio("small_stocks")
         large_portfolio = tests.get_test_portfolio("large_test")
 
-        assert len(small_portfolio) < len(large_portfolio), "Should have different sized portfolios"
+        assert len(small_portfolio) < len(
+            large_portfolio
+        ), "Should have different sized portfolios"
 
         # Test performance tracking
         tracker = PerformanceTracker()
@@ -201,7 +233,8 @@ class TestDataDirectoryUsageExamples:
         # Performance should be measurable
         assert small_duration > 0, "Should measure small portfolio performance"
         assert large_duration > 0, "Should measure large portfolio performance"
-        # Note: We don't assert large > small as the difference might be minimal with mock data
+        # Note: we don't assert large > small as the difference might be
+        # minimal with mock data
 
 
 class TestDataDirectoryMaintenance:
@@ -223,15 +256,25 @@ class TestDataDirectoryMaintenance:
         portfolios_data = tests.load_sample_portfolios()
 
         # Test that all portfolios have required fields
-        for portfolio_name, portfolio_data in portfolios_data["test_portfolios"].items():
-            assert "symbols" in portfolio_data, f"Portfolio {portfolio_name} should have symbols"
-            assert isinstance(portfolio_data["symbols"], list), f"Symbols should be a list for {portfolio_name}"
-            assert len(portfolio_data["symbols"]) > 0, f"Portfolio {portfolio_name} should have at least one symbol"
+        for portfolio_name, portfolio_data in portfolios_data[
+            "test_portfolios"
+        ].items():
+            assert (
+                "symbols" in portfolio_data
+            ), f"Portfolio {portfolio_name} should have symbols"
+            assert isinstance(
+                portfolio_data["symbols"], list
+            ), f"Symbols should be a list for {portfolio_name}"
+            assert (
+                len(portfolio_data["symbols"]) > 0
+            ), f"Portfolio {portfolio_name} should have at least one symbol"
 
             # Test symbols are valid strings
             for symbol in portfolio_data["symbols"]:
                 assert isinstance(symbol, str), f"Symbol {symbol} should be a string"
-                assert len(symbol) > 0, f"Symbol should not be empty in {portfolio_name}"
+                assert (
+                    len(symbol) > 0
+                ), f"Symbol should not be empty in {portfolio_name}"
 
     def test_data_directory_access_permissions(self):
         """Test that test data directory has proper access permissions."""
@@ -244,4 +287,6 @@ class TestDataDirectoryMaintenance:
         # Files should be readable
         for file in data_dir.iterdir():
             if file.is_file():
-                assert file.stat().st_size >= 0, f"File {file.name} should be accessible"
+                assert (
+                    file.stat().st_size >= 0
+                ), f"File {file.name} should be accessible"

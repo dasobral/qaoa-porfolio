@@ -1,5 +1,9 @@
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.unit
+
 
 def test_qaoa_portfolio_core_wrapper_package_exists_for_maturin_layout():
     """maturin needs a Python package matching module-name when python-source is set."""

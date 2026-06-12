@@ -35,10 +35,13 @@ config = QAOAConfig(
     seed=42,
     backend="default.qubit",
     num_restarts=2,
+    max_stored_solutions=64,
 )
 ```
 
 Supported optimizers are `adam`, `gradient_descent`, `cobyla`, and `nelder_mead`. Supported PennyLane devices are `default.qubit` and `lightning.qubit`. Use `shots=None` for deterministic statevector probabilities in tests and small local experiments.
+
+`max_stored_solutions` (default 64) caps how many of the most probable basis states are kept in `QAOAResult.probabilities` and considered for ranking — the full 2ⁿ distribution grows exponentially and is never needed downstream. For n ≤ 6 the default keeps every state, so small-instance behavior is exact.
 
 ## QUBO Input
 
@@ -78,7 +81,7 @@ The mixer Hamiltonian is the standard X-mixer with one Pauli-X term per wire.
 - `convergence_history`
 - `iterations`, `elapsed_ms`, and `metadata`
 
-Top solutions are ranked by original QUBO objective value ascending. For statevector runs, every computational-basis bitstring receives a probability and can be ranked.
+Top solutions are ranked by original QUBO objective value ascending, among the `max_stored_solutions` most probable basis states (`probabilities` carries exactly that capped set; the cap is echoed in `metadata["max_stored_solutions"]`).
 
 ## End-to-End Example
 

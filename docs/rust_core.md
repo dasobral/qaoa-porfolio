@@ -25,6 +25,17 @@ let portfolio = Portfolio::new(vec![aapl, msft])?.with_weights(vec![0.6, 0.4])?;
 
 `Portfolio::new` rejects empty portfolios, duplicate symbols, invalid assets, and malformed weights. `ReturnSeries::from_prices` accepts a row-major `DMatrix<f64>` of positive prices, computes log returns, and exposes annualized mean returns, covariance, and correlation matrices.
 
+## Return and Annualization Conventions
+
+The two layers intentionally use different conventions, each standard for its role:
+
+| Layer | Returns | Annualized return | Annualized risk |
+|---|---|---|---|
+| Rust `ReturnSeries` (QUBO construction, solver baselines) | log returns | daily mean × 252 (exact for time-additive log returns) | covariance × 252 |
+| Python `FinancialMetrics` (reporting, Phase 4 charts) | simple returns (`pct_change`) | `(1 + daily mean)^252 − 1` (compound) | daily std × √252 |
+
+The conventions agree to first order (`exp(μ_log · 252) − 1 ≈ (1 + μ_simple)^252 − 1`) but diverge materially for volatile assets. **Rule for comparisons:** never mix layers in one table or chart. Rust conventions are internal to QUBO/solver construction; any reported or plotted metrics — including Phase 5 QAOA-vs-classical comparisons — must be computed for *all* candidates with Python `FinancialMetrics` on the same simple-returns series. A cross-layer consistency test in `tests/test_rust_bridge.py` verifies the first-order agreement.
+
 ## QUBO Formulation
 
 `QUBOMatrix` stores a symmetric matrix plus an offset and variable labels. Off-diagonal entries are evaluated once using the upper triangle, which matches the binary QUBO coefficient convention used by the budget penalty expansion.
